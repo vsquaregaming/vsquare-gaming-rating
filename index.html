@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rate Vsquare Gaming</title>
+<meta name="theme-color" content="#0f1013">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1013;
+    --surface: #17191e;
+    --surface-2: #1f2228;
+    --line: #2a2d35;
+    --text: #f3f3ee;
+    --muted: #8b909a;
+    --accent: #ffd23f;
+    --accent-dark: #b8930f;
+    --accent-ink: #1a1500;
+    --ok: #5ee08a;
+    --radius: 14px;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100dvh;
+    background: var(--bg);
+    background-image: radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 18px 18px;
+    color: var(--text);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    display: flex; justify-content: center;
+    padding: 0 16px calc(130px + env(safe-area-inset-bottom));
+  }
+  main { width: 100%; max-width: 420px; }
+  button { font-family: inherit; color: inherit; }
+
+  /* ---- Sticky header ---- */
+  .top {
+    position: sticky; top: 0; z-index: 5;
+    margin: 0 -16px 8px; padding: max(14px, env(safe-area-inset-top)) 16px 12px;
+    background: rgba(15,16,19,.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid transparent; transition: border-color .2s;
+  }
+  .top.scrolled { border-bottom-color: var(--line); }
+  .top .quest { margin-bottom: 0; }
+
+  /* ---- Bottom dock ---- */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+    padding: 14px 16px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 70%, rgba(15,16,19,0));
+  }
+  .dock[hidden] { display: none; }
+  .dock-inner { max-width: 420px; margin: 0 auto; }
+  .dock .btn-main { margin-top: 0; }
+  .dock .note { margin-top: 10px; }
+  .g-chip { width: 28px; height: 28px; flex: none; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+  .g-chip svg { width: 16px; height: 16px; }
+
+  /* ---- HUD ---- */
+  .hud { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .mark {
+    width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center; font: 700 17px var(--mono); letter-spacing: -1px;
+  }
+  .brand-name { font: 700 12px var(--mono); letter-spacing: 2px; }
+  .brand-sub { font-size: 12px; color: var(--muted); }
+  .xp { font: 700 12px var(--mono); color: var(--muted); text-align: right; }
+  .xp b { color: var(--accent); font-size: 14px; display: inline-block; }
+  .xp b.bump { animation: bump .4s ease; }
+  @keyframes bump { 40% { transform: scale(1.4); } }
+
+  .gbadge {
+    display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text);
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 10px 12px; margin-bottom: 12px; transition: border-color .15s, transform .1s;
+  }
+  .gbadge:active { transform: scale(.99); }
+  .gbadge:hover { border-color: #3a3e48; }
+  .g-logo { width: 32px; height: 32px; flex: none; border-radius: 8px; background: #fff; display: grid; place-items: center; }
+  .g-logo svg { width: 18px; height: 18px; }
+  .g-main { flex: 1; min-width: 0; }
+  .g-row { display: flex; align-items: center; gap: 8px; }
+  .g-score { font-size: 18px; font-weight: 700; line-height: 1; }
+  .g-stars { display: inline-block; position: relative; font-size: 14px; letter-spacing: 2px; line-height: 1; color: #3a3e48; }
+  .g-stars span { position: absolute; inset: 0; overflow: hidden; color: var(--accent); white-space: nowrap; }
+  .g-count { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .g-cta { font: 700 11px var(--mono); letter-spacing: 1px; color: var(--muted); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .g-cta svg { width: 14px; height: 14px; }
+
+  .quest { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 22px; }
+  .seg { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .seg i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .45s cubic-bezier(.2,.8,.2,1); }
+  .seg.done i { width: 100%; }
+
+  /* ---- Panels ---- */
+  .panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 20px;
+    padding: 22px 18px; margin-bottom: 12px;
+  }
+  .panel[hidden] { display: none; }
+  .panel.enter { animation: enter .35s cubic-bezier(.2,.8,.2,1); }
+  @keyframes enter { from { opacity: 0; transform: translateY(10px); } }
+
+  .eyebrow { font: 700 11px var(--mono); letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin: 0 0 6px; display: flex; justify-content: space-between; }
+  .eyebrow .reward { color: var(--accent); }
+  h1 { font-size: 28px; line-height: 1.1; margin: 0 0 4px; letter-spacing: -.5px; }
+  h2 { font-size: 19px; margin: 0 0 14px; letter-spacing: -.2px; }
+  .lead { color: var(--muted); margin: 0 0 20px; font-size: 15px; }
+
+  /* ---- Stars ---- */
+  .stars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .star {
+    aspect-ratio: 1; border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px;
+    display: grid; place-items: center; cursor: pointer; padding: 0;
+    transition: background .15s, border-color .15s, transform .1s;
+  }
+  .star svg { width: 60%; height: 60%; }
+  .star path { fill: none; stroke: #4a4e58; stroke-width: 1.6; stroke-linejoin: round; transition: fill .15s, stroke .15s; }
+  .star.on { background: rgba(255,210,63,.12); border-color: var(--accent); }
+  .star.on path { fill: var(--accent); stroke: var(--accent); }
+  .star:active { transform: scale(.92); }
+  .star.hit { animation: hit .3s ease both; }
+  @keyframes hit { 50% { transform: scale(1.12) rotate(-6deg); } }
+  .rank { margin-top: 14px; min-height: 26px; display: flex; align-items: center; gap: 8px; }
+  .rank-tag { font: 700 12px var(--mono); letter-spacing: 1px; padding: 4px 8px; border-radius: 6px; background: var(--accent); color: var(--accent-ink); }
+  .rank-text { color: var(--muted); font-size: 14px; }
+
+  /* ---- Perks ---- */
+  .perks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .perk {
+    display: flex; align-items: center; gap: 10px; text-align: left;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .box { width: 18px; height: 18px; flex: none; border-radius: 5px; border: 1.5px solid #4a4e58; display: grid; place-items: center; transition: .15s; }
+  .box svg { width: 12px; opacity: 0; }
+  .perk.on { border-color: var(--accent); background: rgba(255,210,63,.08); }
+  .perk.on .box { background: var(--accent); border-color: var(--accent); }
+  .perk.on .box svg { opacity: 1; }
+
+  /* ---- Review ---- */
+  .review-wrap { position: relative; }
+  textarea {
+    width: 100%; min-height: 150px; resize: none; display: block; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 14px 40px; font: 16px/1.5 "Space Grotesk", sans-serif;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  textarea.typing { caret-color: transparent; }
+  .count { position: absolute; right: 12px; bottom: 10px; font: 500 11px var(--mono); color: var(--muted); }
+
+  .btn {
+    width: 100%; border: 0; border-radius: var(--radius); padding: 16px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: transform .08s, box-shadow .08s, opacity .2s;
+  }
+  .btn svg { width: 20px; height: 20px; flex: none; }
+  .btn-roll { margin-top: 10px; background: var(--surface-2); border: 1px solid var(--line); box-shadow: 0 4px 0 #0a0b0d; }
+  .btn-roll:active { transform: translateY(4px); box-shadow: 0 0 0 #0a0b0d; }
+  .btn-roll.spin svg { animation: spin .5s cubic-bezier(.2,.8,.2,1); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-main { background: var(--accent); color: var(--accent-ink); box-shadow: 0 5px 0 var(--accent-dark); margin-top: 14px; }
+  .btn-main:active { transform: translateY(5px); box-shadow: 0 0 0 var(--accent-dark); }
+  .btn-main:disabled { background: var(--surface-2); color: var(--muted); box-shadow: 0 5px 0 #0a0b0d; pointer-events: none; }
+  .btn-main:disabled .g-chip { opacity: .5; }
+  .note { font-size: 13px; color: var(--muted); text-align: center; margin: 14px 0 0; line-height: 1.45; }
+
+  /* ---- Complete ---- */
+  .complete { text-align: center; padding-top: 30px; }
+  .badge {
+    width: 84px; height: 84px; margin: 0 auto 16px; border-radius: 22px; background: var(--accent);
+    display: grid; place-items: center; transform: rotate(-6deg); animation: land .5s cubic-bezier(.2,1.4,.4,1);
+  }
+  .badge svg { width: 42px; }
+  @keyframes land { from { transform: scale(.3) rotate(-30deg); opacity: 0; } }
+  .checklist { list-style: none; padding: 0; margin: 20px 0 6px; text-align: left; counter-reset: s; }
+  .checklist li { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); font-size: 15px; counter-increment: s; }
+  .checklist li::before { content: counter(s); width: 26px; height: 26px; flex: none; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center; font: 700 12px var(--mono); color: var(--accent); }
+  .text-btn { background: none; border: 0; color: var(--muted); font-size: 14px; font-weight: 600; margin-top: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(120px + env(safe-area-inset-bottom)); transform: translate(-50%, 16px); opacity: 0; visibility: hidden;
+    background: var(--text); color: var(--bg); font-weight: 700; font-size: 14px;
+    padding: 12px 16px; border-radius: 12px; transition: transform .3s cubic-bezier(.2,.8,.2,1), opacity .2s, visibility .2s; z-index: 10;
+    display: flex; gap: 8px; align-items: center; white-space: nowrap;
+  }
+  .toast.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+  .toast i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+<header class="top">
+  <div class="hud">
+    <div class="brand">
+      <div class="mark">V²</div>
+      <div>
+        <div class="brand-name">VSQUARE GAMING</div>
+        <div class="brand-sub">Gaming Parlour</div>
+      </div>
+    </div>
+    <div class="xp">XP <b id="xp">0</b>/100</div>
+  </div>
+  <a class="gbadge" id="gbadge" target="_blank" rel="noopener" aria-label="See our Google reviews on Google Maps">
+    <span class="g-logo"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg></span>
+    <span class="g-main">
+      <span class="g-row">
+        <span class="g-score" id="gScore">–</span>
+        <span class="g-stars" aria-hidden="true">★★★★★<span id="gFill">★★★★★</span></span>
+      </span>
+      <span class="g-count" id="gCount" style="display:block">Google reviews</span>
+    </span>
+    <span class="g-cta">MAPS <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></span>
+  </a>
+
+  <div class="quest" aria-hidden="true">
+    <div class="seg" id="seg1"><i></i></div>
+    <div class="seg" id="seg2"><i></i></div>
+    <div class="seg" id="seg3"><i></i></div>
+  </div>
+</header>
+
+  <div id="flow">
+    <section class="panel">
+      <p class="eyebrow"><span>Quest 1 · Rate</span><span class="reward">+40 XP</span></p>
+      <h1>GG! How was your session?</h1>
+      <p class="lead">Tap to rate your visit today.</p>
+      <div class="stars" id="stars" role="radiogroup" aria-label="Rating"></div>
+      <div class="rank" id="rank"></div>
+    </section>
+
+    <section class="panel" id="perksPanel" hidden>
+      <p class="eyebrow"><span>Quest 2 · Highlights</span><span class="reward">+20 XP</span></p>
+      <h2>What stood out?</h2>
+      <div class="perks" id="perks"></div>
+    </section>
+
+    <section class="panel" id="reviewPanel" hidden>
+      <p class="eyebrow"><span>Quest 3 · Review</span><span class="reward">+40 XP</span></p>
+      <h2>Write it, or roll one</h2>
+      <div class="review-wrap">
+        <textarea id="review" placeholder="Type a few words about your visit…" maxlength="1000"></textarea>
+        <span class="count" id="count">0</span>
+      </div>
+      <button class="btn btn-roll" id="rollBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>
+        <span id="rollText">Roll a review</span>
+      </button>
+    </section>
+  </div>
+
+  <section class="panel complete" id="donePanel" hidden>
+    <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#1a1500" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <p class="eyebrow" style="justify-content:center">Quest complete · 100 XP</p>
+    <h1>Last step on Google</h1>
+    <ol class="checklist">
+      <li>Tap&nbsp;<b id="doneStars">5</b>&nbsp;stars</li>
+      <li>Long-press the box and tap <b>&nbsp;Paste</b></li>
+      <li>Hit <b>&nbsp;Post</b></li>
+    </ol>
+    <button class="btn btn-main" id="reopenBtn"><span class="g-chip"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg></span>Open Google again</button>
+    <button class="text-btn" id="backBtn">Edit my review</button>
+  </section>
+</main>
+
+<div class="dock" id="dock">
+  <div class="dock-inner">
+    <button class="btn btn-main" id="postBtn" disabled>
+      <span class="g-chip"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg></span>
+      Copy &amp; post on Google
+    </button>
+    <p class="note" id="dockNote">Rate your visit to get started</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"><i></i><span id="toastText"></span></div>
+
+<script src="generator.js"></script>
+<script>
+// ---- Config ----
+const GOOGLE_REVIEW_URL = "https://search.google.com/local/writereview?placeid=ChIJPdPTQcjhDDkRlZjyoFd1Cpo";
+const PLACE_ID = "ChIJPdPTQcjhDDkRlZjyoFd1Cpo";
+const MAPS_URL = `https://www.google.com/maps/search/?api=1&query=VSQUARE%20GAMING&query_place_id=${PLACE_ID}`;
+// Optional: a browser key with "Places API (New)" enabled, restricted to your site's domain.
+// Leave empty to show the fallback numbers below (update them by hand now and then).
+const PLACES_API_KEY = "";
+const FALLBACK_RATING = { rating: 5.0, count: 86 };
+
+const RANKS = [null,
+  ["POOR", "Sorry about that. Tell us what went wrong."],
+  ["MEH", "Thanks. What could we do better?"],
+  ["OKAY", "Decent. Help us level up."],
+  ["GREAT", "Nice! Glad you had fun."],
+  ["LEGENDARY", "Top score. You made our day."],
+];
+
+const TOPICS = {
+  consoles: "Setups & PCs",
+  games: "Game library",
+  vibe: "Ambience",
+  staff: "Staff",
+  price: "Pricing",
+  clean: "Cleanliness",
+  friends: "Squad play",
+  snacks: "Snacks",
+};
+
+// ---- State ----
+let rating = 0;
+const selected = new Set();
+const earned = { rate: false, perks: false, review: false };
+const $ = (id) => document.getElementById(id);
+const buzz = (ms = 12) => navigator.vibrate && navigator.vibrate(ms);
+
+// ---- XP / quest bar ----
+let xpShown = 0;
+function updateXP() {
+  const target = (earned.rate ? 40 : 0) + (earned.perks ? 20 : 0) + (earned.review ? 40 : 0);
+  $("seg1").classList.toggle("done", earned.rate);
+  $("seg2").classList.toggle("done", earned.perks);
+  $("seg3").classList.toggle("done", earned.review);
+  if (target === xpShown) return;
+  const el = $("xp"), from = xpShown, start = performance.now();
+  xpShown = target;
+  el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump");
+  (function step(t) {
+    const p = Math.min(1, (t - start) / 400);
+    el.textContent = Math.round(from + (target - from) * p);
+    if (p < 1) requestAnimationFrame(step);
+  })(start);
+}
+function reveal(id) {
+  const p = $(id);
+  if (!p.hidden) return;
+  p.hidden = false; p.classList.add("enter");
+}
+
+// ---- Google rating badge ----
+function showRating({ rating, count, url }) {
+  $("gScore").textContent = Number(rating).toFixed(1);
+  $("gFill").style.width = `${(rating / 5) * 100}%`;
+  $("gCount").textContent = `${Number(count).toLocaleString("en-IN")} Google reviews`;
+  $("gbadge").href = url || MAPS_URL;
+}
+async function loadRating() {
+  showRating(FALLBACK_RATING);
+  if (!PLACES_API_KEY) return;
+  const CACHE = "vsq_rating", TTL = 6 * 60 * 60 * 1000; // refresh at most every 6 hours
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE));
+    if (c && Date.now() - c.at < TTL) return showRating(c);
+  } catch {}
+  try {
+    const res = await fetch(`https://places.googleapis.com/v1/places/${PLACE_ID}?fields=rating,userRatingCount,googleMapsUri&key=${PLACES_API_KEY}`);
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d.rating) return;
+    const data = { rating: d.rating, count: d.userRatingCount, url: d.googleMapsUri, at: Date.now() };
+    showRating(data);
+    try { localStorage.setItem(CACHE, JSON.stringify(data)); } catch {}
+  } catch {}
+}
+loadRating();
+
+// ---- Stars ----
+const STAR = '<svg viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4L2.8 9.5l6.4-.8z"/></svg>';
+const starsEl = $("stars");
+for (let i = 1; i <= 5; i++) {
+  const b = document.createElement("button");
+  b.className = "star";
+  b.setAttribute("role", "radio");
+  b.setAttribute("aria-label", `${i} star${i > 1 ? "s" : ""}`);
+  b.innerHTML = STAR;
+  b.addEventListener("click", () => setRating(i));
+  starsEl.appendChild(b);
+}
+
+function setRating(r) {
+  const changed = r !== rating;
+  rating = r;
+  [...starsEl.children].forEach((s, i) => {
+    s.classList.toggle("on", i < r);
+    s.setAttribute("aria-checked", i === r - 1);
+    s.classList.remove("hit");
+    if (i < r) { void s.offsetWidth; s.style.animationDelay = `${i * 45}ms`; s.classList.add("hit"); }
+  });
+  const [tag, text] = RANKS[r];
+  $("rank").innerHTML = `<span class="rank-tag">${tag}</span><span class="rank-text">${text}</span>`;
+  $("doneStars").textContent = r;
+  $("rollText").textContent = r >= 4 ? "Roll a review" : "Roll honest feedback";
+  if (changed && earned.review && reviewEl.dataset.rolled === "1") rollReview(); // keep tone in sync
+  earned.rate = true; updateXP();
+  reveal("perksPanel"); reveal("reviewPanel");
+  if (reviewEl.value.trim().length < 3) $("dockNote").textContent = "Write or roll a review to continue";
+  buzz();
+}
+
+// ---- Perks ----
+const CHECK = '<svg viewBox="0 0 12 12" fill="none" stroke="#1a1500" stroke-width="2"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg>';
+Object.entries(TOPICS).forEach(([key, label]) => {
+  const c = document.createElement("button");
+  c.className = "perk";
+  c.setAttribute("aria-pressed", "false");
+  c.innerHTML = `<span class="box">${CHECK}</span>${label}`;
+  c.addEventListener("click", () => {
+    selected.has(key) ? selected.delete(key) : selected.add(key);
+    c.classList.toggle("on", selected.has(key));
+    c.setAttribute("aria-pressed", selected.has(key));
+    earned.perks = selected.size > 0; updateXP();
+    buzz(8);
+  });
+  $("perks").appendChild(c);
+});
+
+// ---- Review ----
+const reviewEl = $("review");
+function fit() { reviewEl.style.height = "auto"; reviewEl.style.height = reviewEl.scrollHeight + "px"; }
+function syncReview() {
+  fit();
+  const n = reviewEl.value.trim().length;
+  $("count").textContent = n;
+  $("postBtn").disabled = n < 3;
+  $("dockNote").textContent = n >= 3 ? "Copies your review, then opens Google" : "Write or roll a review to continue";
+  earned.review = n >= 3; updateXP();
+}
+reviewEl.addEventListener("input", () => { reviewEl.dataset.rolled = "0"; syncReview(); });
+
+let typer;
+function rollReview() {
+  const text = ReviewGen.generateUnique(rating, [...selected]);
+  clearInterval(typer);
+  reviewEl.classList.add("typing");
+  reviewEl.dataset.rolled = "1";
+  // Time-based so it always finishes in ~600ms, even if the browser throttles timers.
+  const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 600;
+  const start = performance.now();
+  typer = setInterval(() => {
+    const i = duration ? Math.min(text.length, Math.ceil(text.length * (performance.now() - start) / duration)) : text.length;
+    reviewEl.value = text.slice(0, i);
+    $("count").textContent = i; fit();
+    if (i >= text.length) { clearInterval(typer); reviewEl.classList.remove("typing"); syncReview(); }
+  }, 12);
+}
+$("rollBtn").addEventListener("click", () => {
+  if (!rating) return;
+  const b = $("rollBtn");
+  b.classList.remove("spin"); void b.offsetWidth; b.classList.add("spin");
+  $("rollText").textContent = "Roll again";
+  rollReview();
+  buzz(20);
+});
+
+// ---- Copy & open Google ----
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch {
+    const t = document.createElement("textarea");
+    t.value = text; t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select();
+    const ok = document.execCommand("copy"); t.remove(); return ok;
+  }
+}
+function openGoogle() {
+  const w = window.open(GOOGLE_REVIEW_URL, "_blank");
+  if (!w) location.href = GOOGLE_REVIEW_URL;
+}
+function toast(msg) {
+  $("toastText").textContent = msg;
+  const t = $("toast"); t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2400);
+}
+
+$("postBtn").addEventListener("click", async () => {
+  // Copy + open synchronously within the tap so mobile browsers don't block the new tab.
+  const copied = copy(reviewEl.value.trim());
+  openGoogle();
+  toast((await copied) ? "Review copied. Paste it on Google." : "Couldn't copy. Please copy it manually.");
+  earned.perks = true; updateXP(); // posting completes the full quest
+  $("flow").hidden = true; $("dock").hidden = true;
+  $("donePanel").hidden = false; $("donePanel").classList.add("enter");
+  window.scrollTo(0, 0);
+  buzz(40);
+});
+$("reopenBtn").addEventListener("click", () => { copy(reviewEl.value.trim()); openGoogle(); });
+$("backBtn").addEventListener("click", () => { $("donePanel").hidden = true; $("flow").hidden = false; $("dock").hidden = false; });
+addEventListener("scroll", () => document.querySelector(".top").classList.toggle("scrolled", scrollY > 4), { passive: true });
+</script>
+</body>
+</html>
