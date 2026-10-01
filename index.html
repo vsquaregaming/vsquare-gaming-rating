@@ -192,6 +192,7 @@
     padding: 12px 16px; border-radius: 12px; transition: transform .3s cubic-bezier(.2,.8,.2,1), opacity .2s, visibility .2s; z-index: 10;
     display: flex; gap: 8px; align-items: center; white-space: nowrap;
   }
+  body.nodock .toast { bottom: max(20px, env(safe-area-inset-bottom)); }
   .toast.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
   .toast i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
 
@@ -265,12 +266,9 @@
     <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#1a1500" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
     <p class="eyebrow" style="justify-content:center">Quest complete · 100 XP</p>
     <h1>Last step on Google</h1>
-    <ol class="checklist">
-      <li>Tap&nbsp;<b id="doneStars">5</b>&nbsp;stars</li>
-      <li>Long-press the box and tap <b>&nbsp;Paste</b></li>
-      <li>Hit <b>&nbsp;Post</b></li>
-    </ol>
+    <ol class="checklist" id="steps"></ol>
     <button class="btn btn-main" id="reopenBtn"><span class="g-chip"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg></span>Open Google again</button>
+    <button class="text-btn" id="browserBtn" hidden>No Google Maps app? Open in browser</button>
     <button class="text-btn" id="backBtn">Edit my review</button>
   </section>
 </main>
@@ -296,6 +294,10 @@ const MAPS_URL = `https://www.google.com/maps/search/?api=1&query=VSQUARE%20GAMI
 // Optional: a browser key with "Places API (New)" enabled, restricted to your site's domain.
 // Leave empty to show the fallback numbers below (update them by hand now and then).
 const PLACES_API_KEY = "";
+// iPhone: open the place in the Google Maps app (already signed in) with the app's own
+// URL scheme. Safari ignores https Maps links and shows the web page instead.
+const MAPS_APP_URL = "comgooglemapsurl://www.google.com/maps?cid=11099813250830866581";
+const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const FALLBACK_RATING = { rating: 5.0, count: 86 };
 
 const RANKS = [null,
@@ -398,7 +400,6 @@ function setRating(r) {
   });
   const [tag, text] = RANKS[r];
   $("rank").innerHTML = `<span class="rank-tag">${tag}</span><span class="rank-text">${text}</span>`;
-  $("doneStars").textContent = r;
   $("rollText").textContent = r >= 4 ? "Roll a review" : "Roll honest feedback";
   if (changed && earned.review && reviewEl.dataset.rolled === "1") rollReview(); // keep tone in sync
   earned.rate = true; updateXP();
@@ -472,9 +473,23 @@ async function copy(text) {
     const ok = document.execCommand("copy"); t.remove(); return ok;
   }
 }
+function openUrl(url) {
+  const w = window.open(url, "_blank");
+  if (!w) location.href = url;
+}
+// Android opens the review form straight in the Maps app. iPhone sends search.google.com
+// links to a browser that usually isn't signed in to Google, so use the Maps app there.
 function openGoogle() {
-  const w = window.open(GOOGLE_REVIEW_URL, "_blank");
-  if (!w) location.href = GOOGLE_REVIEW_URL;
+  if (!IS_IOS) return openUrl(GOOGLE_REVIEW_URL);
+  // Custom schemes must load in the current tab. If the app doesn't open within 2.5s
+  // (not installed), fall back to the review page in the browser.
+  let left = false;
+  const mark = () => { left = true; };
+  addEventListener("pagehide", mark, { once: true });
+  addEventListener("blur", mark, { once: true });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) mark(); }, { once: true });
+  location.href = MAPS_APP_URL;
+  setTimeout(() => { if (!left && !document.hidden) location.href = GOOGLE_REVIEW_URL; }, 2500);
 }
 function toast(msg) {
   $("toastText").textContent = msg;
@@ -488,13 +503,22 @@ $("postBtn").addEventListener("click", async () => {
   openGoogle();
   toast((await copied) ? "Review copied. Paste it on Google." : "Couldn't copy. Please copy it manually.");
   earned.perks = true; updateXP(); // posting completes the full quest
-  $("flow").hidden = true; $("dock").hidden = true;
+  renderSteps();
+  $("flow").hidden = true; $("dock").hidden = true; document.body.classList.add("nodock");
   $("donePanel").hidden = false; $("donePanel").classList.add("enter");
   window.scrollTo(0, 0);
   buzz(40);
 });
 $("reopenBtn").addEventListener("click", () => { copy(reviewEl.value.trim()); openGoogle(); });
-$("backBtn").addEventListener("click", () => { $("donePanel").hidden = true; $("flow").hidden = false; $("dock").hidden = false; });
+$("backBtn").addEventListener("click", () => { $("donePanel").hidden = true; $("flow").hidden = false; $("dock").hidden = false; document.body.classList.remove("nodock"); });
+function renderSteps() {
+  const steps = IS_IOS
+    ? ["In Google Maps, tap <b>Reviews</b>", `Tap <b>${rating} stars</b> to start your review`, "Long-press the box, tap <b>Paste</b>, then <b>Post</b>"]
+    : [`Tap <b>${rating} stars</b>`, "Long-press the box and tap <b>Paste</b>", "Hit <b>Post</b>"];
+  $("steps").innerHTML = steps.map(t => `<li><span>${t}</span></li>`).join("");
+  $("browserBtn").hidden = !IS_IOS;
+}
+$("browserBtn").addEventListener("click", () => { copy(reviewEl.value.trim()); openUrl(GOOGLE_REVIEW_URL); });
 addEventListener("scroll", () => document.querySelector(".top").classList.toggle("scrolled", scrollY > 4), { passive: true });
 </script>
 </body>
